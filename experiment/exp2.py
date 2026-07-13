@@ -1,32 +1,35 @@
 import ollama
 
-# 第一轮：告诉它一个信息
+# Experiment 2: the model has NO memory — "conversation" only exists
+# because the program re-sends the full history every time.
+
+# Round 1: tell it a fact
 r1 = ollama.chat(
     model="qwen3.5:9b",
-    messages=[{"role": "user", "content": "我叫 Isaac，记住我的名字。"}],
+    messages=[{"role": "user", "content": "My name is Isaac. Remember my name."}],
     think=False,
 )
-print("第一轮回复:", r1["message"]["content"])
+print("Round 1 reply:", r1["message"]["content"])
 
-# 第二轮 A：只发新问题（错误做法）
+# Round 2 A: send only the new question (wrong way)
 r2 = ollama.chat(
     model="qwen3.5:9b",
-    messages=[{"role": "user", "content": "我叫什么名字？"}],
+    messages=[{"role": "user", "content": "What is my name?"}],
     think=False,
 )
-print("只发新问题:", r2["message"]["content"])
+print("New question only:", r2["message"]["content"])
 
-# 第二轮 B：把历史全部带上（正确做法）
+# Round 2 B: include the full history (right way)
 r3 = ollama.chat(
     model="qwen3.5:9b",
     messages=[
-        {"role": "user", "content": "我叫 Isaac，记住我的名字。"},
+        {"role": "user", "content": "My name is Isaac. Remember my name."},
         {
             "role": "assistant",
             "content": r1["message"]["content"],
-        },  # 模型自己上轮说的话
-        {"role": "user", "content": "我叫什么名字？"},
+        },  # the model's own reply from last round
+        {"role": "user", "content": "What is my name?"},
     ],
     think=False,
 )
-print("带上历史:", r3["message"]["content"])
+print("With history:", r3["message"]["content"])

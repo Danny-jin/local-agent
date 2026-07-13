@@ -1,15 +1,17 @@
 import json
 
-# 情况 1：干净的 JSON 字符串 → 能翻译成 dict
+# Experiment 3: string -> dict with json.loads
+
+# Case 1: a clean JSON string -> parses into a dict
 s1 = '{"tool": "read_file", "args": {"path": "devlog.md"}}'
 d = json.loads(s1)
-print(type(d))  # <class 'dict'>  —— 翻译成功，现在是真 dict 了
+print(type(d))  # <class 'dict'> — parsed successfully, now a real dict
 print(d["tool"])  # read_file
 print(d["args"]["path"])  # devlog.md
 
-# 情况 2：不是 JSON 的字符串 → 翻译会“爆炸”（抛异常）
-s2 = "好的，我来帮你读文件！"
+# Case 2: a non-JSON string -> raises an exception
+s2 = "Sure, let me read that file for you!"
 try:
     json.loads(s2)
 except json.JSONDecodeError:
-    print("解析失败！原始内容是:", s2)
+    print("Parse failed! Raw content was:", s2)

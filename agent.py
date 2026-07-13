@@ -15,24 +15,21 @@ user_task = "Summarize the file at /Users/jinzhiyuan/local-agent/devlog.md"
 
 
 def run_tool(name, args):
-    """今天用假工具：不管收到什么，都返回写死的内容。
-    （为什么用假的？这样出问题时能确定是循环坏了，不是文件读取坏了。真工具周三换。）"""
+    """W1-b: fake tool — always returns a hardcoded string, ignores args.
+    (Why fake? If something breaks today, we know it's the loop/parser,
+    not file I/O. The real tool comes in W1-c.)"""
     if name == "read_file":
         return "This is a fake file. It says: recursion is a function calling itself."
     return f"Error: tool '{name}' does not exist."
 
 
 def try_parse(text):
-    """把模型的文本变成三种结果之一:
-    ("tool", dict) / ("final", str) / ("fail", 原始文本)"""
+    """Parse the model's raw text into one of three outcomes:
+    ("tool", dict) / ("final", str) / ("fail", raw_text)"""
     try:
         d = json.loads(text)
     except json.JSONDecodeError:
         return ("fail", text)
-    # TODO 1: 如果 d 里有 "tool" 这个 key → return ("tool", d)
-    #         如果 d 里有 "final" 这个 key → return ("final", d["final"])
-    #         都没有 → return ("fail", text)
-    #         提示: 判断 dict 里有没有某个 key 的写法是  if "tool" in d:
     if "tool" in d:
         return ("tool", d)
     if "final" in d:
@@ -45,34 +42,28 @@ messages = [
     {"role": "user", "content": user_task},
 ]
 
-for step in range(5):  # 最多传 5 轮纸条，防止死循环
-    print(f"\n===== 第 {step + 1} 轮 =====")
+for step in range(5):  # step limit: prevents infinite loops
+    print(f"\n===== Step {step + 1} =====")
 
     resp = ollama.chat(model="qwen3.5:9b", messages=messages, think=False)
 
-    # TODO 2: 从 resp 里取出模型说的话（一个字符串），存到变量 text
-    #         提示: 实验 1 的第二个 print
     text = resp["message"]["content"]
+    print("Model says:", text)
 
-    print("模型说:", text)
-
-    # TODO 3: 把模型这句话追加进 messages，让它下一轮记得自己说过什么
-    #         提示: 实验 2 的做法，role 用 "assistant"
-    #         messages.append({...})
+    # Append the model's own reply so it remembers what it said next round
     messages.append({"role": "assistant", "content": text})
     kind, content = try_parse(text)
 
     if kind == "tool":
         result = run_tool(content["tool"], content["args"])
-        print("工具返回:", result)
-        # TODO 4: 把工具结果追加进 messages，让模型下一轮能看到
-        #         role 用 "user"，content 写成 f"Tool result: {result}"
-        messages.append({"role": "user", "content": f"Tool result:{result}"})
+        print("Tool returned:", result)
+        # Feed the tool result back so the model sees it next round
+        messages.append({"role": "user", "content": f"Tool result: {result}"})
 
     elif kind == "final":
-        print("\n🎉 最终回答:", content)
+        print("\nFinal answer:", content)
         break
 
     else:  # fail
-        print("⚠️ 解析失败，模型的原始输出在上面 ↑（这是宝贵的实验数据，记进 devlog）")
+        print("Parse failed. Raw model output above — valuable failure data, log it in devlog.")
         break
